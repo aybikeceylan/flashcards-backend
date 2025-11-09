@@ -1,9 +1,12 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
+import dotenv from "dotenv";
+import express, { Express, Request, Response, NextFunction } from "express";
+import cors from "cors";
+import connectDB from "./config/db";
+import flashcardRoutes from "./routes/flashcard.routes";
 
-const app = express();
+dotenv.config();
+
+const app: Express = express();
 
 // Middleware
 app.use(cors());
@@ -11,27 +14,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MongoDB connection
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/flashcards";
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => {
-    console.log("MongoDB bağlantısı başarılı");
-  })
-  .catch((error) => {
-    console.error("MongoDB bağlantı hatası:", error);
-  });
+connectDB();
 
 // Routes
-// TODO: Routes buraya eklenecek
+app.use("/api/flashcards", flashcardRoutes);
 
 // Health check endpoint
-app.get("/", (req, res) => {
+app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Flashcards Backend API çalışıyor!" });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({
     message: "Bir hata oluştu!",
@@ -45,4 +39,4 @@ app.listen(PORT, () => {
   console.log(`Server ${PORT} portunda çalışıyor`);
 });
 
-module.exports = app;
+export default app;
