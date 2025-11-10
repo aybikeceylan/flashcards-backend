@@ -1,17 +1,23 @@
 import { Request, Response } from "express";
 import Flashcard from "../models/flashcard.model";
+import { badRequest, notFound, success, failure } from "../utils/response";
+
+/**
+ * BEST PRACTICE: Controller fonksiyonları asyncHandler ile sarmalanır
+ * Bu sayede try-catch tekrarı olmaz ve hatalar otomatik error handler'a gider
+ *
+ * NOT: next parametresi artık gerekli değil çünkü asyncHandler hataları yakalar
+ */
 
 // Get all flashcards
 export const getAllFlashcards = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  try {
-    const flashcards = await Flashcard.find().sort({ createdAt: -1 });
-    res.status(200).json(flashcards);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
+  const flashcards = await Flashcard.find().sort({ createdAt: -1 });
+  res
+    .status(200)
+    .json(success(flashcards, "Flashcard'lar başarıyla getirildi"));
 };
 
 // Get single flashcard
@@ -19,16 +25,14 @@ export const getFlashcardById = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  try {
-    const flashcard = await Flashcard.findById(req.params.id);
-    if (!flashcard) {
-      res.status(404).json({ message: "Flashcard bulunamadı" });
-      return;
-    }
-    res.status(200).json(flashcard);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+  const flashcard = await Flashcard.findById(req.params.id);
+
+  if (!flashcard) {
+    res.status(404).json(notFound("Flashcard bulunamadı"));
+    return;
   }
+
+  res.status(200).json(success(flashcard));
 };
 
 // Create flashcard
@@ -36,27 +40,52 @@ export const createFlashcard = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  try {
-    const { word, translation, example, imageUrl, audioUrl } = req.body;
+  const { word, translation, example, imageUrl, audioUrl } = req.body;
 
-    if (!word) {
-      res.status(400).json({ message: "Word alanı zorunludur" });
-      return;
-    }
-
-    const flashcard = new Flashcard({
-      word,
-      translation,
-      example,
-      imageUrl,
-      audioUrl,
-    });
-
-    const savedFlashcard = await flashcard.save();
-    res.status(201).json(savedFlashcard);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+  // Validation
+  if (!word) {
+    res.status(400).json(badRequest("Word alanı zorunludur"));
+    return;
   }
+
+  // Eğer dosya yüklendiyse, dosya URL'lerini kullan
+  let finalImageUrl = imageUrl;
+  let finalAudioUrl = audioUrl;
+
+  // Multipart form data'dan gelen dosyaları kontrol et
+  const files = req.files as
+    | { [fieldname: string]: Express.Multer.File[] }
+    | undefined;
+
+  if (files) {
+    // Image dosyası varsa
+    if (files.image && files.image[0]) {
+      finalImageUrl = `/uploads/images/${files.image[0].filename}`;
+    }
+    // Audio dosyası varsa
+    if (files.audio && files.audio[0]) {
+      finalAudioUrl = `/uploads/audio/${files.audio[0].filename}`;
+    }
+  }
+
+  // Tek dosya olarak da kontrol et (single upload)
+  const imageFile = req.file as Express.Multer.File | undefined;
+  if (imageFile && imageFile.fieldname === "image") {
+    finalImageUrl = `/uploads/images/${imageFile.filename}`;
+  }
+
+  const flashcard = new Flashcard({
+    word,
+    translation,
+    example,
+    imageUrl: finalImageUrl,
+    audioUrl: finalAudioUrl,
+  });
+
+  const savedFlashcard = await flashcard.save();
+  res
+    .status(201)
+    .json(success(savedFlashcard, "Flashcard başarıyla oluşturuldu"));
 };
 
 // Update flashcard
@@ -64,30 +93,62 @@ export const updateFlashcard = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  try {
-    const { word, translation, example, imageUrl, audioUrl } = req.body;
+  const { word, translation, example, imageUrl, audioUrl } = req.body;
 
-    const flashcard = await Flashcard.findByIdAndUpdate(
-      req.params.id,
-      {
-        word,
-        translation,
-        example,
-        imageUrl,
-        audioUrl,
-      },
-      { new: true, runValidators: true }
-    );
-
-    if (!flashcard) {
-      res.status(404).json({ message: "Flashcard bulunamadı" });
-      return;
-    }
-
-    res.status(200).json(flashcard);
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+  // Mevcut flashcard'ı getir
+  const existingFlashcard = await Flashcard.findById(req.params.id);
+  if (!existingFlashcard) {
+    res.status(404).json(notFound("Flashcard bulunamadı"));
+    return;
   }
+
+  // Eğer dosya yüklendiyse, dosya URL'lerini kullan
+  let finalImageUrl =
+    imageUrl !== undefined ? imageUrl : existingFlashcard.imageUrl;
+  let finalAudioUrl =
+    audioUrl !== undefined ? audioUrl : existingFlashcard.audioUrl;
+
+  // Multipart form data'dan gelen dosyaları kontrol et
+  const files = req.files as
+    | { [fieldname: string]: Express.Multer.File[] }
+    | undefined;
+
+  if (files) {
+    // Image dosyası varsa
+    if (files.image && files.image[0]) {
+      finalImageUrl = `/uploads/images/${files.image[0].filename}`;
+    }
+    // Audio dosyası varsa
+    if (files.audio && files.audio[0]) {
+      finalAudioUrl = `/uploads/audio/${files.audio[0].filename}`;
+    }
+  }
+
+  // Tek dosya olarak da kontrol et (single upload)
+  const imageFile = req.file as Express.Multer.File | undefined;
+  if (imageFile && imageFile.fieldname === "image") {
+    finalImageUrl = `/uploads/images/${imageFile.filename}`;
+  }
+
+  const updateData: any = {};
+  if (word !== undefined) updateData.word = word;
+  if (translation !== undefined) updateData.translation = translation;
+  if (example !== undefined) updateData.example = example;
+  if (finalImageUrl !== undefined) updateData.imageUrl = finalImageUrl;
+  if (finalAudioUrl !== undefined) updateData.audioUrl = finalAudioUrl;
+
+  const flashcard = await Flashcard.findByIdAndUpdate(
+    req.params.id,
+    updateData,
+    { new: true, runValidators: true }
+  );
+
+  if (!flashcard) {
+    res.status(404).json(notFound("Flashcard bulunamadı"));
+    return;
+  }
+
+  res.status(200).json(success(flashcard, "Flashcard başarıyla güncellendi"));
 };
 
 // Delete flashcard
@@ -95,18 +156,14 @@ export const deleteFlashcard = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  try {
-    const flashcard = await Flashcard.findByIdAndDelete(req.params.id);
+  const flashcard = await Flashcard.findByIdAndDelete(req.params.id);
 
-    if (!flashcard) {
-      res.status(404).json({ message: "Flashcard bulunamadı" });
-      return;
-    }
-
-    res.status(200).json({ message: "Flashcard başarıyla silindi" });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+  if (!flashcard) {
+    res.status(404).json(notFound("Flashcard bulunamadı"));
+    return;
   }
+
+  res.status(200).json(success(flashcard, "Flashcard başarıyla silindi"));
 };
 
 // ========== OLMAYAN METOTLAR - ÖRNEKLER ==========
@@ -121,11 +178,11 @@ export const getFlashcardByWord = async (
     const flashcard = await Flashcard.findOne({ word: word });
 
     if (!flashcard) {
-      res.status(404).json({ message: "Flashcard bulunamadı" });
+      res.status(404).json(failure("Flashcard bulunamadı"));
       return;
     }
 
-    res.status(200).json(flashcard);
+    res.status(200).json(success(flashcard));
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
