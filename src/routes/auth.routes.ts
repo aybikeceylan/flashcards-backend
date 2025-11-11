@@ -1,5 +1,14 @@
 import express, { Router } from "express";
-import { register, login, logout, me } from "../controllers/auth.controller";
+import {
+  register,
+  login,
+  logout,
+  me,
+  getProfile,
+  updateProfile,
+  updatePassword,
+  deleteAccount,
+} from "../controllers/auth.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { protect } from "../middleware/auth";
 
@@ -193,5 +202,189 @@ router.post("/logout", asyncHandler(logout));
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/me", protect, asyncHandler(me));
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Kullanıcı profil bilgilerini getir
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Profil bilgileri
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: Yetkilendirme hatası
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/profile", protect, asyncHandler(getProfile));
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   put:
+ *     summary: Profil bilgilerini güncelle
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Ahmet Yılmaz"
+ *               email:
+ *                 type: string
+ *                 example: "ahmet@example.com"
+ *     responses:
+ *       200:
+ *         description: Profil başarıyla güncellendi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Profil başarıyla güncellendi"
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Geçersiz istek
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Yetkilendirme hatası
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.put("/profile", protect, asyncHandler(updateProfile));
+
+/**
+ * @swagger
+ * /api/auth/profile/password:
+ *   put:
+ *     summary: Şifre değiştir
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 example: "123456"
+ *               newPassword:
+ *                 type: string
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Şifre başarıyla güncellendi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Şifre başarıyla güncellendi"
+ *       400:
+ *         description: Geçersiz istek
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Yetkilendirme hatası veya mevcut şifre yanlış
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.put("/profile/password", protect, asyncHandler(updatePassword));
+
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   delete:
+ *     summary: Hesabı sil
+ *     tags: [Auth]
+ *     security:
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Hesap başarıyla silindi
+ *         headers:
+ *           Set-Cookie:
+ *             description: Cookie temizlenir
+ *             schema:
+ *               type: string
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Hesap başarıyla silindi"
+ *       401:
+ *         description: Yetkilendirme hatası
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.delete("/profile", protect, asyncHandler(deleteAccount));
 
 export default router;
