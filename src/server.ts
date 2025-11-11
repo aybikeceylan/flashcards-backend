@@ -15,30 +15,10 @@ dotenv.config();
 const app: Express = express();
 
 // Middleware
-// CORS - React Native ve Web desteği için
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "http://localhost:3000",
-  "http://localhost:19006", // Expo web
-  "http://localhost:8081", // Android Emulator
-  "exp://localhost:19000", // Expo dev client
-].filter(Boolean) as string[];
-
+// CORS - Cookie desteği için credentials: true
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // React Native'de origin null olabilir veya olmayabilir
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        // Development için tüm origin'lere izin ver (production'da kaldırılmalı)
-        if (process.env.NODE_ENV !== "production") {
-          callback(null, true);
-        } else {
-          callback(new Error("CORS policy violation"));
-        }
-      }
-    },
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true, // Cookie göndermek için gerekli
   })
 );
