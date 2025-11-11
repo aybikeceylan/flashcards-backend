@@ -20,6 +20,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:3000",
   "http://localhost:19006", // Expo web
+  "http://localhost:8081", // Android Emulator
   "exp://localhost:19000", // Expo dev client
 ].filter(Boolean) as string[];
 
