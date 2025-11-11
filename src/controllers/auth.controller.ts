@@ -51,7 +51,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     email: user.email,
   });
 
-  // Token'ı httpOnly cookie'ye kaydet
+  // Token'ı httpOnly cookie'ye kaydet (web için)
   res.cookie("token", token, cookieOptions);
 
   // Response (password'ü gönderme)
@@ -59,6 +59,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     _id: user._id,
     name: user.name,
     email: user.email,
+    token, // React Native için token'ı response'da da gönder
   };
 
   res.status(201).json(success(userResponse, "Kullanıcı başarıyla kaydedildi"));
@@ -96,7 +97,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     email: user.email,
   });
 
-  // Token'ı httpOnly cookie'ye kaydet
+  // Token'ı httpOnly cookie'ye kaydet (web için)
   res.cookie("token", token, cookieOptions);
 
   // Response (password'ü gönderme)
@@ -104,6 +105,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     _id: user._id,
     name: user.name,
     email: user.email,
+    token, // React Native için token'ı response'da da gönder
   };
 
   res.status(200).json(success(userResponse, "Giriş başarılı"));

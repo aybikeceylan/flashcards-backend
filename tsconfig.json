@@ -12,6 +12,7 @@
     "resolveJsonModule": true
   },
   "include": ["src"],
+  "exclude": ["expo-services", "node_modules"],
   "ts-node": {
     "esm": false,
     "transpileOnly": true
