@@ -7,6 +7,8 @@ import {
   getProfile,
   updateProfile,
   updatePassword,
+  forgotPassword,
+  resetPassword,
   deleteAccount,
 } from "../controllers/auth.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -350,6 +352,99 @@ router.put("/profile", protect, asyncHandler(updateProfile));
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put("/profile/password", protect, asyncHandler(updatePassword));
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Şifre sıfırlama tokeni oluştur
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: "ahmet@example.com"
+ *     responses:
+ *       200:
+ *         description: Şifre sıfırlama tokeni oluşturuldu
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Şifre sıfırlama tokeni oluşturuldu. Email'inizi kontrol edin."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     resetToken:
+ *                       type: string
+ *                       description: Sadece development için - Production'da kaldırılmalı
+ *       400:
+ *         description: Geçersiz istek
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post("/forgot-password", asyncHandler(forgotPassword));
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Token ile şifreyi sıfırla
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: "abc123def456..."
+ *                 description: forgot-password endpoint'inden alınan token
+ *               newPassword:
+ *                 type: string
+ *                 example: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Şifre başarıyla sıfırlandı
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Şifre başarıyla sıfırlandı"
+ *       400:
+ *         description: Geçersiz token veya şifre
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.post("/reset-password", asyncHandler(resetPassword));
 
 /**
  * @swagger

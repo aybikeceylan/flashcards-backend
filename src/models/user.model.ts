@@ -5,6 +5,8 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  resetPasswordToken?: string;
+  resetPasswordExpire?: Date;
   createdAt?: Date;
   updatedAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -33,6 +35,14 @@ const userSchema: Schema<IUser> = new Schema(
       required: [true, "Şifre zorunludur"],
       minlength: [6, "Şifre en az 6 karakter olmalıdır"],
       select: false, // Password varsayılan olarak getirilmez
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false, // Varsayılan olarak getirilmez
+    },
+    resetPasswordExpire: {
+      type: Date,
+      select: false, // Varsayılan olarak getirilmez
     },
   },
   { timestamps: true }
