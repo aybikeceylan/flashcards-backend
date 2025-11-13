@@ -4,6 +4,9 @@ export interface CreateFlashcardDto {
   example?: string;
   imageUrl?: string;
   audioUrl?: string;
+  phonetic?: string;
+  pronunciation?: string;
+  partOfSpeech?: string;
 }
 
 export interface UpdateFlashcardDto {
@@ -12,4 +15,7 @@ export interface UpdateFlashcardDto {
   example?: string;
   imageUrl?: string;
   audioUrl?: string;
+  phonetic?: string;
+  pronunciation?: string;
+  partOfSpeech?: string;
 }

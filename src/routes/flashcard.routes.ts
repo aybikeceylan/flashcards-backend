@@ -5,6 +5,8 @@ import {
   createFlashcard,
   updateFlashcard,
   deleteFlashcard,
+  getDictionaryData,
+  getWordSuggestions,
 } from "../controllers/flashcard.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { uploadFiles } from "../config/multer";
@@ -159,6 +161,137 @@ const router: Router = express.Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/", asyncHandler(getAllFlashcards));
+
+/**
+ * @swagger
+ * /api/flashcards/dictionary:
+ *   get:
+ *     summary: Kelime için sözlük verilerini getir
+ *     tags: [Flashcards]
+ *     parameters:
+ *       - in: query
+ *         name: word
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Aranacak kelime
+ *         example: "hello"
+ *     responses:
+ *       200:
+ *         description: Sözlük verileri başarıyla getirildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     word:
+ *                       type: string
+ *                       example: "hello"
+ *                     phonetic:
+ *                       type: string
+ *                       example: "/həˈloʊ/"
+ *                     pronunciation:
+ *                       type: string
+ *                       example: "https://api.dictionaryapi.dev/media/pronunciations/en/hello-us.mp3"
+ *                     meanings:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           partOfSpeech:
+ *                             type: string
+ *                             example: "noun"
+ *                           definitions:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 definition:
+ *                                   type: string
+ *                                 example:
+ *                                   type: string
+ *                 message:
+ *                   type: string
+ *                   example: "Sözlük verileri başarıyla getirildi"
+ *       400:
+ *         description: Geçersiz istek
+ *       404:
+ *         description: Kelime bulunamadı
+ *       500:
+ *         description: Sunucu hatası
+ */
+router.get("/dictionary", asyncHandler(getDictionaryData));
+
+/**
+ * @swagger
+ * /api/flashcards/suggestions:
+ *   get:
+ *     summary: Kelime önerileri (autocomplete)
+ *     tags: [Flashcards]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Aranacak kelime (en az 2 karakter)
+ *         example: "hello"
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maksimum öneri sayısı
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Kelime önerileri başarıyla getirildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     suggestions:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["hello", "hell", "help", "helmet"]
+ *                     count:
+ *                       type: integer
+ *                       example: 4
+ *                     source:
+ *                       type: object
+ *                       properties:
+ *                         database:
+ *                           type: integer
+ *                           description: Veritabanından gelen öneri sayısı
+ *                           example: 2
+ *                         google:
+ *                           type: integer
+ *                           description: Google'dan gelen öneri sayısı
+ *                           example: 8
+ *                 message:
+ *                   type: string
+ *                   example: "Kelime önerileri başarıyla getirildi"
+ *       400:
+ *         description: Geçersiz istek
+ *       500:
+ *         description: Sunucu hatası
+ */
+router.get("/suggestions", asyncHandler(getWordSuggestions));
 
 /**
  * @swagger

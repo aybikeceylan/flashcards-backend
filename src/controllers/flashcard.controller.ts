@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import Flashcard from "../models/flashcard.model";
 import { badRequest, notFound, success, failure } from "../utils/response";
+import {
+  fetchWordFromDictionary,
+  getGoogleSuggestions,
+} from "../utils/dictionary";
 
 /**
  * BEST PRACTICE: Controller fonksiyonları asyncHandler ile sarmalanır
@@ -74,12 +78,67 @@ export const createFlashcard = async (
     finalImageUrl = `/uploads/images/${imageFile.filename}`;
   }
 
+  // Dictionary API'den otomatik veri çek (eğer translation veya example yoksa)
+  let enrichedData: any = {};
+  const shouldFetchFromDictionary = !translation || !example;
+
+  if (shouldFetchFromDictionary) {
+    try {
+      const dictionaryData = await fetchWordFromDictionary(word);
+
+      if (dictionaryData) {
+        // İlk anlamı translation olarak kullan
+        if (!translation && dictionaryData.meanings.length > 0) {
+          const firstDefinition =
+            dictionaryData.meanings[0]?.definitions[0]?.definition;
+          if (firstDefinition) {
+            enrichedData.translation = firstDefinition;
+          }
+        }
+
+        // İlk örnek cümleyi kullan
+        if (!example) {
+          const firstExample =
+            dictionaryData.meanings[0]?.definitions[0]?.example ||
+            dictionaryData.exampleSentences?.[0];
+          if (firstExample) {
+            enrichedData.example = firstExample;
+          }
+        }
+
+        // Phonetic ve pronunciation bilgilerini ekle
+        if (dictionaryData.phonetic) {
+          enrichedData.phonetic = dictionaryData.phonetic;
+        }
+
+        if (dictionaryData.pronunciation) {
+          enrichedData.pronunciation = dictionaryData.pronunciation;
+          // Eğer audioUrl yoksa, pronunciation'ı audioUrl olarak kullan
+          if (!finalAudioUrl) {
+            enrichedData.audioUrl = dictionaryData.pronunciation;
+          }
+        }
+
+        // Part of speech bilgisini ekle
+        if (dictionaryData.meanings[0]?.partOfSpeech) {
+          enrichedData.partOfSpeech = dictionaryData.meanings[0].partOfSpeech;
+        }
+      }
+    } catch (error: any) {
+      // Dictionary API hatası olsa bile flashcard oluşturulmaya devam eder
+      console.error("Dictionary API hatası:", error.message);
+    }
+  }
+
   const flashcard = new Flashcard({
     word,
-    translation,
-    example,
+    translation: translation || enrichedData.translation,
+    example: example || enrichedData.example,
     imageUrl: finalImageUrl,
-    audioUrl: finalAudioUrl,
+    audioUrl: finalAudioUrl || enrichedData.audioUrl,
+    phonetic: enrichedData.phonetic,
+    pronunciation: enrichedData.pronunciation,
+    partOfSpeech: enrichedData.partOfSpeech,
   });
 
   const savedFlashcard = await flashcard.save();
@@ -420,5 +479,112 @@ export const searchFlashcards = async (
     res.status(200).json(flashcards);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Get dictionary data for a word
+export const getDictionaryData = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { word } = req.query;
+
+    if (!word || typeof word !== "string") {
+      res.status(400).json(badRequest("Word parametresi zorunludur"));
+      return;
+    }
+
+    const dictionaryData = await fetchWordFromDictionary(word);
+
+    if (!dictionaryData) {
+      res.status(404).json(notFound("Kelime bulunamadı veya sözlükte yok"));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(success(dictionaryData, "Sözlük verileri başarıyla getirildi"));
+  } catch (error: any) {
+    res.status(500).json(failure(error.message));
+  }
+};
+
+// Get word suggestions (autocomplete)
+export const getWordSuggestions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { q, limit = "10" } = req.query;
+
+    if (!q || typeof q !== "string" || q.length < 2) {
+      res
+        .status(400)
+        .json(
+          badRequest(
+            "Query parametresi zorunludur ve en az 2 karakter olmalıdır"
+          )
+        );
+      return;
+    }
+
+    const limitNum = parseInt(limit as string) || 10;
+    const query = q.toLowerCase().trim();
+
+    // 1. Veritabanından benzer kelimeleri çek (kullanıcının kendi kelimeleri)
+    const dbSuggestions = await Flashcard.find({
+      word: { $regex: `^${query}`, $options: "i" }, // Başlayan kelimeler
+    })
+      .select("word")
+      .limit(limitNum)
+      .sort({ word: 1 })
+      .lean();
+
+    const dbWords = dbSuggestions.map((f) => f.word);
+
+    // 2. Google Suggestions'dan öneriler çek
+    let googleSuggestions: string[] = [];
+    try {
+      googleSuggestions = await getGoogleSuggestions(query);
+    } catch (error: any) {
+      console.error("Google suggestions hatası:", error.message);
+    }
+
+    // 3. Önerileri birleştir ve sırala
+    // Önce veritabanındaki kelimeler, sonra Google önerileri
+    const allSuggestions = [
+      ...dbWords,
+      ...googleSuggestions.filter(
+        (word) => !dbWords.includes(word.toLowerCase())
+      ),
+    ];
+
+    // Tekrarları kaldır ve limit'e göre kes
+    const uniqueSuggestions = Array.from(
+      new Set(allSuggestions.map((w) => w.toLowerCase()))
+    )
+      .slice(0, limitNum)
+      .map((w) => {
+        // Orijinal case'i koru (veritabanından gelen)
+        const dbMatch = dbWords.find((dbw) => dbw.toLowerCase() === w);
+        return dbMatch || w;
+      });
+
+    res.status(200).json(
+      success(
+        {
+          suggestions: uniqueSuggestions,
+          count: uniqueSuggestions.length,
+          source: {
+            database: dbWords.length,
+            google: googleSuggestions.length,
+          },
+        },
+        "Kelime önerileri başarıyla getirildi"
+      )
+    );
+  } catch (error: any) {
+    res.status(500).json(failure(error.message));
   }
 };

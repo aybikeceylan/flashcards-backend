@@ -6,6 +6,9 @@ export interface IFlashcard extends Document {
   example?: string;
   imageUrl?: string;
   audioUrl?: string;
+  phonetic?: string; // Telaffuz yazılışı (örn: /həˈloʊ/)
+  pronunciation?: string; // Telaffuz audio URL'i
+  partOfSpeech?: string; // Kelime türü (noun, verb, adjective, etc.)
 }
 
 const flashcardSchema: Schema<IFlashcard> = new Schema(
@@ -15,6 +18,9 @@ const flashcardSchema: Schema<IFlashcard> = new Schema(
     example: { type: String },
     imageUrl: { type: String },
     audioUrl: { type: String },
+    phonetic: { type: String }, // Telaffuz yazılışı
+    pronunciation: { type: String }, // Telaffuz audio URL'i
+    partOfSpeech: { type: String }, // Kelime türü
   },
   { timestamps: true }
 );
