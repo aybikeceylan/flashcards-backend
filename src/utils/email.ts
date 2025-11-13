@@ -9,15 +9,31 @@ import nodemailer from "nodemailer";
 const createTransporter = () => {
   // Gmail için örnek konfigürasyon
   // Production'da daha güvenli bir SMTP servisi kullanılmalı (SendGrid, AWS SES, vb.)
-  return nodemailer.createTransport({
+  //
+  // Gmail App Password oluşturma:
+  // 1. Google Account -> Security -> 2-Step Verification (açık olmalı)
+  // 2. App passwords -> Select app: Mail, Select device: Other -> Generate
+  // 3. Oluşturulan 16 karakterli şifreyi EMAIL_PASSWORD olarak kullan
+
+  const config: any = {
     host: process.env.EMAIL_HOST || "smtp.gmail.com",
     port: parseInt(process.env.EMAIL_PORT || "587"),
     secure: process.env.EMAIL_SECURE === "true", // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD, // Gmail için App Password kullanılmalı
+      pass: process.env.EMAIL_PASSWORD,
     },
-  });
+  };
+
+  // Gmail için TLS ayarları
+  if (config.host === "smtp.gmail.com" && !config.secure) {
+    config.requireTLS = true;
+    config.tls = {
+      rejectUnauthorized: false,
+    };
+  }
+
+  return nodemailer.createTransport(config);
 };
 
 /**
@@ -123,9 +139,51 @@ Bu email otomatik olarak gönderilmiştir. Lütfen yanıtlamayın.
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Şifre sıfırlama emaili gönderildi: ${email}`);
-  } catch (error) {
-    console.error("Email gönderme hatası:", error);
+    console.log(`✅ Şifre sıfırlama emaili gönderildi: ${email}`);
+    console.log(`📧 Reset URL: ${resetUrl}`);
+  } catch (error: any) {
+    console.error("❌ Email gönderme hatası:", error);
+
+    // Gmail kimlik doğrulama hatası için özel mesaj
+    if (error.code === "EAUTH" || error.responseCode === 535) {
+      console.error("\n⚠️  GMAIL KİMLİK DOĞRULAMA HATASI!");
+      console.error("📝 Çözüm:");
+      console.error(
+        "1. Google Account -> Security -> 2-Step Verification'ı açın"
+      );
+      console.error("2. App passwords -> Mail seçin -> Generate");
+      console.error(
+        "3. Oluşturulan 16 karakterli şifreyi .env dosyasına EMAIL_PASSWORD olarak ekleyin"
+      );
+      console.error(
+        "4. EMAIL_USER'a Gmail adresinizi ekleyin (örn: yourname@gmail.com)"
+      );
+      console.error(
+        "\n💡 Not: Normal Gmail şifreniz çalışmaz, mutlaka App Password kullanmalısınız!\n"
+      );
+    }
+
+    // Development modunda email içeriğini console'a yazdır
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "\n📬 ========== EMAIL İÇERİĞİ (Development Modu) =========="
+      );
+      console.log(`📧 To: ${email}`);
+      console.log(`📧 From: ${mailOptions.from}`);
+      console.log(`📧 Subject: ${mailOptions.subject}`);
+      console.log(`\n🔗 Reset URL: ${resetUrl}`);
+      console.log(`\n📝 Token: ${resetToken}`);
+      console.log("\n📄 Email HTML İçeriği:");
+      console.log("─".repeat(60));
+      console.log(mailOptions.html);
+      console.log("─".repeat(60));
+      console.log("\n📄 Email Text İçeriği:");
+      console.log("─".repeat(60));
+      console.log(mailOptions.text);
+      console.log("─".repeat(60));
+      console.log("==========================================\n");
+    }
+
     throw new Error("Email gönderilemedi. Lütfen daha sonra tekrar deneyin.");
   }
 };

@@ -356,22 +356,23 @@ export const forgotPassword = async (
         )
       );
   } catch (error: any) {
-    // Email gönderilemediyse token'ı temizle ve hata döndür
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-
     console.error("Email gönderme hatası:", error);
 
     // Development ortamında token'ı response'da döndür (debug için)
+    // Token'ı temizleme, çünkü kullanıcı bu token ile reset password yapabilmeli
     if (process.env.NODE_ENV === "development") {
       res.status(200).json(
         success(
           { resetToken }, // SADECE DEVELOPMENT İÇİN
-          "Email gönderilemedi, ancak token oluşturuldu (development modu)"
+          "Email gönderilemedi, ancak token oluşturuldu (development modu). Console'da email içeriğini görebilirsiniz."
         )
       );
     } else {
+      // Production'da email gönderilemediyse token'ı temizle
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
       // Production'da genel bir hata mesajı
       res
         .status(500)
