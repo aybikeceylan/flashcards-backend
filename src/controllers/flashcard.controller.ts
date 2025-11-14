@@ -44,7 +44,7 @@ export const createFlashcard = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { word, translation, example, imageUrl, audioUrl } = req.body;
+  const { word, translation, meaning, example, imageUrl, audioUrl } = req.body;
 
   // Validation
   if (!word) {
@@ -87,7 +87,16 @@ export const createFlashcard = async (
       const dictionaryData = await fetchWordFromDictionary(word);
 
       if (dictionaryData) {
-        // İlk anlamı translation olarak kullan
+        // İlk anlamı meaning olarak kullan (İngilizce açıklama)
+        if (!meaning && dictionaryData.meanings.length > 0) {
+          const firstDefinition =
+            dictionaryData.meanings[0]?.definitions[0]?.definition;
+          if (firstDefinition) {
+            enrichedData.meaning = firstDefinition;
+          }
+        }
+
+        // İlk anlamı translation olarak da kullan (eğer translation yoksa)
         if (!translation && dictionaryData.meanings.length > 0) {
           const firstDefinition =
             dictionaryData.meanings[0]?.definitions[0]?.definition;
@@ -133,6 +142,7 @@ export const createFlashcard = async (
   const flashcard = new Flashcard({
     word,
     translation: translation || enrichedData.translation,
+    meaning: meaning || enrichedData.meaning,
     example: example || enrichedData.example,
     imageUrl: finalImageUrl,
     audioUrl: finalAudioUrl || enrichedData.audioUrl,
@@ -152,7 +162,7 @@ export const updateFlashcard = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { word, translation, example, imageUrl, audioUrl } = req.body;
+  const { word, translation, meaning, example, imageUrl, audioUrl } = req.body;
 
   // Mevcut flashcard'ı getir
   const existingFlashcard = await Flashcard.findById(req.params.id);
@@ -192,6 +202,7 @@ export const updateFlashcard = async (
   const updateData: any = {};
   if (word !== undefined) updateData.word = word;
   if (translation !== undefined) updateData.translation = translation;
+  if (meaning !== undefined) updateData.meaning = meaning;
   if (example !== undefined) updateData.example = example;
   if (finalImageUrl !== undefined) updateData.imageUrl = finalImageUrl;
   if (finalAudioUrl !== undefined) updateData.audioUrl = finalAudioUrl;

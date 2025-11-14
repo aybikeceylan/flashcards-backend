@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IFlashcard extends Document {
   word: string;
   translation?: string;
+  meaning?: string; // Kelime anlamı (İngilizce açıklama)
   example?: string;
   imageUrl?: string;
   audioUrl?: string;
@@ -14,7 +15,8 @@ export interface IFlashcard extends Document {
 const flashcardSchema: Schema<IFlashcard> = new Schema(
   {
     word: { type: String, required: true },
-    translation: { type: String },
+    translation: { type: String }, // Türkçe çeviri
+    meaning: { type: String }, // Kelime anlamı (İngilizce açıklama)
     example: { type: String },
     imageUrl: { type: String },
     audioUrl: { type: String },
