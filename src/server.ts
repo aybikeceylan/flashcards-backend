@@ -7,8 +7,10 @@ import connectDB from "./config/db";
 import flashcardRoutes from "./routes/flashcard.routes";
 import uploadRoutes from "./routes/upload.routes";
 import authRoutes from "./routes/auth.routes";
+import notificationRoutes from "./routes/notification.routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { swaggerDocs } from "./config/swagger";
+import { startCronJobs } from "./services/cron.service";
 
 dotenv.config();
 
@@ -37,6 +39,7 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/flashcards", flashcardRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Swagger docs
 swaggerDocs(app);
@@ -53,6 +56,9 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server ${PORT} portunda çalışıyor`);
+
+  // Cron job'ları başlat
+  startCronJobs();
 });
 
 export default app;

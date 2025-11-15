@@ -7,6 +7,13 @@ export interface IUser extends Document {
   password: string;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
+  // Notification preferences
+  notificationPreferences?: {
+    dailyReminder: boolean;
+    reminderTime?: string; // Format: "HH:MM" (örn: "09:00")
+    motivationMessages: boolean;
+    motivationFrequency?: "daily" | "weekly" | "biweekly"; // Günlük, haftalık, iki haftada bir
+  };
   createdAt?: Date;
   updatedAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -43,6 +50,29 @@ const userSchema: Schema<IUser> = new Schema(
     resetPasswordExpire: {
       type: Date,
       select: false, // Varsayılan olarak getirilmez
+    },
+    notificationPreferences: {
+      dailyReminder: {
+        type: Boolean,
+        default: false,
+      },
+      reminderTime: {
+        type: String,
+        default: "09:00", // Varsayılan saat: 09:00
+        match: [
+          /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+          "Geçerli bir saat formatı giriniz (HH:MM)",
+        ],
+      },
+      motivationMessages: {
+        type: Boolean,
+        default: false,
+      },
+      motivationFrequency: {
+        type: String,
+        enum: ["daily", "weekly", "biweekly"],
+        default: "weekly",
+      },
     },
   },
   { timestamps: true }
