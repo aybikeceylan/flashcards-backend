@@ -19,7 +19,7 @@ export const getNotificationPreferences = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId;
 
   if (!userId) {
     res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
@@ -50,7 +50,7 @@ export const updateNotificationPreferences = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId;
 
   if (!userId) {
     res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
@@ -134,7 +134,7 @@ export const getNotificationHistory = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId;
 
   if (!userId) {
     res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
@@ -172,7 +172,7 @@ export const testDailyReminder = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId;
 
   if (!userId) {
     res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
@@ -201,7 +201,7 @@ export const testMotivationMessage = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const userId = (req as any).user?.id;
+  const userId = req.user?.userId;
 
   if (!userId) {
     res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
