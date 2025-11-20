@@ -62,6 +62,7 @@ export const updateNotificationPreferences = async (
     reminderTime,
     motivationMessages,
     motivationFrequency,
+    pushNotifications,
   } = req.body;
 
   // Validation
@@ -104,6 +105,10 @@ export const updateNotificationPreferences = async (
   if (motivationFrequency !== undefined) {
     updateData["notificationPreferences.motivationFrequency"] =
       motivationFrequency;
+  }
+
+  if (pushNotifications !== undefined) {
+    updateData["notificationPreferences.pushNotifications"] = pushNotifications;
   }
 
   const user = await User.findByIdAndUpdate(
@@ -218,6 +223,90 @@ export const testMotivationMessage = async (
   try {
     await sendMotivationMessage(user);
     res.status(200).json(success(null, "Test motivasyon mesajı gönderildi"));
+  } catch (error: any) {
+    res.status(500).json(badRequest(error.message));
+  }
+};
+
+/**
+ * FCM token kaydet/güncelle
+ */
+export const registerFCMToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
+    return;
+  }
+
+  const { token } = req.body;
+
+  if (!token || typeof token !== "string") {
+    res.status(400).json(badRequest("FCM token gereklidir"));
+    return;
+  }
+
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      res.status(404).json(notFound("Kullanıcı bulunamadı"));
+      return;
+    }
+
+    // Token zaten varsa ekleme, yoksa ekle
+    const fcmTokens = user.fcmTokens || [];
+    if (!fcmTokens.includes(token)) {
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { fcmTokens: token }, // $addToSet duplicate'leri önler
+      });
+    }
+
+    res.status(200).json(success(null, "FCM token başarıyla kaydedildi"));
+  } catch (error: any) {
+    res.status(500).json(badRequest(error.message));
+  }
+};
+
+/**
+ * FCM token kaldır
+ */
+export const removeFCMToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json(badRequest("Kullanıcı kimliği bulunamadı"));
+    return;
+  }
+
+  const { token } = req.body;
+
+  if (!token || typeof token !== "string") {
+    res.status(400).json(badRequest("FCM token gereklidir"));
+    return;
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $pull: { fcmTokens: token },
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      res.status(404).json(notFound("Kullanıcı bulunamadı"));
+      return;
+    }
+
+    res.status(200).json(success(null, "FCM token başarıyla kaldırıldı"));
   } catch (error: any) {
     res.status(500).json(badRequest(error.message));
   }

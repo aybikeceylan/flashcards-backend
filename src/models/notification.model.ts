@@ -8,6 +8,10 @@ export interface INotification extends Document {
   sentAt: Date;
   status: "sent" | "failed";
   errorMessage?: string;
+  // Push notification fields
+  pushNotificationSent?: boolean;
+  pushNotificationStatus?: "sent" | "failed";
+  pushNotificationError?: string;
 }
 
 const notificationSchema: Schema<INotification> = new Schema(
@@ -42,6 +46,17 @@ const notificationSchema: Schema<INotification> = new Schema(
       default: "sent",
     },
     errorMessage: {
+      type: String,
+    },
+    pushNotificationSent: {
+      type: Boolean,
+      default: false,
+    },
+    pushNotificationStatus: {
+      type: String,
+      enum: ["sent", "failed"],
+    },
+    pushNotificationError: {
       type: String,
     },
   },

@@ -11,8 +11,12 @@ import notificationRoutes from "./routes/notification.routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { swaggerDocs } from "./config/swagger";
 import { startCronJobs } from "./services/cron.service";
+import { initializeFirebase } from "./utils/firebase";
 
 dotenv.config();
+
+// Firebase'i başlat
+initializeFirebase();
 
 const app: Express = express();
 

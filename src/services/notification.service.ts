@@ -3,6 +3,10 @@ import User from "../models/user.model";
 import Flashcard from "../models/flashcard.model";
 import Notification from "../models/notification.model";
 import { IUser } from "../models/user.model";
+import {
+  sendPushNotificationToMultiple,
+  getFirebaseApp,
+} from "../utils/firebase";
 
 /**
  * Notification Service
@@ -171,31 +175,79 @@ Bu email otomatik olarak gönderilmiştir.
     `,
   };
 
+  let notificationRecord: any = {
+    userId: user._id,
+    type: "daily_reminder",
+    email: user.email,
+    subject: mailOptions.subject,
+    status: "sent" as const,
+  };
+
   try {
     await transporter.sendMail(mailOptions);
+    console.log(`✅ Daily reminder email gönderildi: ${user.email}`);
+
+    // Push notification gönder (eğer kullanıcının token'ı varsa ve push notification açıksa)
+    const userWithTokens = await User.findById(user._id).select(
+      "fcmTokens notificationPreferences"
+    );
+    if (
+      userWithTokens &&
+      userWithTokens.fcmTokens &&
+      userWithTokens.fcmTokens.length > 0 &&
+      userWithTokens.notificationPreferences?.pushNotifications !== false
+    ) {
+      try {
+        const flashcardCount = await Flashcard.countDocuments();
+        const { success, failed } = await sendPushNotificationToMultiple(
+          userWithTokens.fcmTokens,
+          "📚 Günlük Hatırlatma",
+          `Flashcard çalışma zamanı! Toplam ${flashcardCount} flashcard var.`,
+          {
+            type: "daily_reminder",
+            url: process.env.FRONTEND_URL || "http://localhost:3000",
+          }
+        );
+
+        notificationRecord.pushNotificationSent = true;
+        notificationRecord.pushNotificationStatus =
+          failed.length === 0 ? "sent" : "failed";
+
+        // Geçersiz token'ları kullanıcıdan kaldır
+        if (failed.length > 0) {
+          await User.findByIdAndUpdate(user._id, {
+            $pull: { fcmTokens: { $in: failed } },
+          });
+          console.log(`⚠️  Geçersiz token'lar kaldırıldı: ${failed.length}`);
+        }
+
+        console.log(
+          `✅ Push notification gönderildi: ${success.length} başarılı, ${failed.length} başarısız`
+        );
+      } catch (pushError: any) {
+        console.error(`❌ Push notification gönderme hatası:`, pushError);
+        notificationRecord.pushNotificationSent = true;
+        notificationRecord.pushNotificationStatus = "failed";
+        notificationRecord.pushNotificationError = pushError.message;
+
+        // Eğer token geçersizse kaldır
+        if (pushError.message === "INVALID_TOKEN" && userWithTokens.fcmTokens) {
+          await User.findByIdAndUpdate(user._id, {
+            $set: { fcmTokens: [] },
+          });
+        }
+      }
+    }
 
     // Notification kaydı oluştur
-    await Notification.create({
-      userId: user._id,
-      type: "daily_reminder",
-      email: user.email,
-      subject: mailOptions.subject,
-      status: "sent",
-    });
-
-    console.log(`✅ Daily reminder gönderildi: ${user.email}`);
+    await Notification.create(notificationRecord);
   } catch (error: any) {
     console.error(`❌ Daily reminder gönderme hatası (${user.email}):`, error);
 
     // Hata kaydı oluştur
-    await Notification.create({
-      userId: user._id,
-      type: "daily_reminder",
-      email: user.email,
-      subject: mailOptions.subject,
-      status: "failed",
-      errorMessage: error.message,
-    });
+    notificationRecord.status = "failed";
+    notificationRecord.errorMessage = error.message;
+    await Notification.create(notificationRecord);
 
     throw error;
   }
@@ -276,19 +328,71 @@ Bu email otomatik olarak gönderilmiştir.
     `,
   };
 
+  let notificationRecord: any = {
+    userId: user._id,
+    type: "motivation",
+    email: user.email,
+    subject: mailOptions.subject,
+    status: "sent" as const,
+  };
+
   try {
     await transporter.sendMail(mailOptions);
+    console.log(`✅ Motivasyon mesajı email gönderildi: ${user.email}`);
+
+    // Push notification gönder (eğer kullanıcının token'ı varsa ve push notification açıksa)
+    const userWithTokens = await User.findById(user._id).select(
+      "fcmTokens notificationPreferences"
+    );
+    if (
+      userWithTokens &&
+      userWithTokens.fcmTokens &&
+      userWithTokens.fcmTokens.length > 0 &&
+      userWithTokens.notificationPreferences?.pushNotifications !== false
+    ) {
+      try {
+        const { success, failed } = await sendPushNotificationToMultiple(
+          userWithTokens.fcmTokens,
+          motivation.title,
+          motivation.message,
+          {
+            type: "motivation",
+            url: process.env.FRONTEND_URL || "http://localhost:3000",
+          }
+        );
+
+        notificationRecord.pushNotificationSent = true;
+        notificationRecord.pushNotificationStatus =
+          failed.length === 0 ? "sent" : "failed";
+
+        // Geçersiz token'ları kullanıcıdan kaldır
+        if (failed.length > 0) {
+          await User.findByIdAndUpdate(user._id, {
+            $pull: { fcmTokens: { $in: failed } },
+          });
+          console.log(`⚠️  Geçersiz token'lar kaldırıldı: ${failed.length}`);
+        }
+
+        console.log(
+          `✅ Push notification gönderildi: ${success.length} başarılı, ${failed.length} başarısız`
+        );
+      } catch (pushError: any) {
+        console.error(`❌ Push notification gönderme hatası:`, pushError);
+        notificationRecord.pushNotificationSent = true;
+        notificationRecord.pushNotificationStatus = "failed";
+        notificationRecord.pushNotificationError = pushError.message;
+
+        // Eğer token geçersizse kaldır
+        if (pushError.message === "INVALID_TOKEN" && userWithTokens.fcmTokens) {
+          await User.findByIdAndUpdate(user._id, {
+            $set: { fcmTokens: [] },
+          });
+        }
+      }
+    }
 
     // Notification kaydı oluştur
-    await Notification.create({
-      userId: user._id,
-      type: "motivation",
-      email: user.email,
-      subject: mailOptions.subject,
-      status: "sent",
-    });
-
-    console.log(`✅ Motivasyon mesajı gönderildi: ${user.email}`);
+    await Notification.create(notificationRecord);
   } catch (error: any) {
     console.error(
       `❌ Motivasyon mesajı gönderme hatası (${user.email}):`,
@@ -296,14 +400,9 @@ Bu email otomatik olarak gönderilmiştir.
     );
 
     // Hata kaydı oluştur
-    await Notification.create({
-      userId: user._id,
-      type: "motivation",
-      email: user.email,
-      subject: mailOptions.subject,
-      status: "failed",
-      errorMessage: error.message,
-    });
+    notificationRecord.status = "failed";
+    notificationRecord.errorMessage = error.message;
+    await Notification.create(notificationRecord);
 
     throw error;
   }

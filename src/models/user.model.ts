@@ -13,7 +13,10 @@ export interface IUser extends Document {
     reminderTime?: string; // Format: "HH:MM" (örn: "09:00")
     motivationMessages: boolean;
     motivationFrequency?: "daily" | "weekly" | "biweekly"; // Günlük, haftalık, iki haftada bir
+    pushNotifications?: boolean; // Push notification tercihi
   };
+  // FCM tokens for push notifications (birden fazla cihaz için array)
+  fcmTokens?: string[];
   createdAt?: Date;
   updatedAt?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -73,6 +76,15 @@ const userSchema: Schema<IUser> = new Schema(
         enum: ["daily", "weekly", "biweekly"],
         default: "weekly",
       },
+      pushNotifications: {
+        type: Boolean,
+        default: true, // Varsayılan olarak açık
+      },
+    },
+    fcmTokens: {
+      type: [String],
+      default: [],
+      select: false, // Varsayılan olarak getirilmez (güvenlik için)
     },
   },
   { timestamps: true }

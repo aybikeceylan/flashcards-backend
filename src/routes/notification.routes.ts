@@ -5,6 +5,8 @@ import {
   getNotificationHistory,
   testDailyReminder,
   testMotivationMessage,
+  registerFCMToken,
+  removeFCMToken,
 } from "../controllers/notification.controller";
 import { protect } from "../middleware/auth";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -36,6 +38,10 @@ const router = Router();
  *           enum: [daily, weekly, biweekly]
  *           description: Motivasyon mesajı sıklığı
  *           example: "weekly"
+ *         pushNotifications:
+ *           type: boolean
+ *           description: Push notification'lar açık/kapalı
+ *           example: true
  *     UpdateNotificationPreferences:
  *       type: object
  *       properties:
@@ -53,6 +59,9 @@ const router = Router();
  *           type: string
  *           enum: [daily, weekly, biweekly]
  *           example: "weekly"
+ *         pushNotifications:
+ *           type: boolean
+ *           example: true
  *     Notification:
  *       type: object
  *       properties:
@@ -349,5 +358,95 @@ router.post("/test/daily-reminder", protect, asyncHandler(testDailyReminder));
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/test/motivation", protect, asyncHandler(testMotivationMessage));
+
+/**
+ * @swagger
+ * /api/notifications/fcm-token:
+ *   post:
+ *     summary: FCM token kaydet/güncelle
+ *     description: Kullanıcının FCM (Firebase Cloud Messaging) token'ını kaydeder veya günceller
+ *     tags: [Notifications]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: FCM device token
+ *                 example: "dGhpcyBpcyBhIGZha2UgdG9rZW4..."
+ *     responses:
+ *       200:
+ *         description: FCM token başarıyla kaydedildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: null
+ *                 message:
+ *                   type: string
+ *                   example: "FCM token başarıyla kaydedildi"
+ *       400:
+ *         description: Geçersiz istek
+ *       401:
+ *         description: Yetkilendirme hatası
+ */
+router.post("/fcm-token", protect, asyncHandler(registerFCMToken));
+
+/**
+ * @swagger
+ * /api/notifications/fcm-token:
+ *   delete:
+ *     summary: FCM token kaldır
+ *     description: Kullanıcının FCM token'ını kaldırır (logout veya cihaz değişikliği için)
+ *     tags: [Notifications]
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Kaldırılacak FCM device token
+ *                 example: "dGhpcyBpcyBhIGZha2UgdG9rZW4..."
+ *     responses:
+ *       200:
+ *         description: FCM token başarıyla kaldırıldı
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: null
+ *                 message:
+ *                   type: string
+ *                   example: "FCM token başarıyla kaldırıldı"
+ *       400:
+ *         description: Geçersiz istek
+ *       401:
+ *         description: Yetkilendirme hatası
+ */
+router.delete("/fcm-token", protect, asyncHandler(removeFCMToken));
 
 export default router;
